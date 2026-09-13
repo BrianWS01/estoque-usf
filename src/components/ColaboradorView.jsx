@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Clock, AlertTriangle, CheckCircle2, Lock, FileText, Send, Calendar } from 'lucide-react';
+import { ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileCheck, Calendar, MapPin, Send } from 'lucide-react';
 
 export const ColaboradorView = () => {
   const { currentUser, data, realizarRetirada, solicitarExcecao } = useAuth();
@@ -28,7 +28,6 @@ export const ColaboradorView = () => {
 
   // Função auxiliar para verificar elegibilidade de retirada no prazo (RN-02 e RN-05)
   const getStatusRetiradaEpi = (epi) => {
-    // Buscar última retirada deste EPI feita pelo usuário
     const ultimaRetirada = minhasMovimentacoes.find(m => m.epi_id === epi.id);
 
     if (!ultimaRetirada) {
@@ -118,10 +117,19 @@ export const ColaboradorView = () => {
                     {epi.nome}
                   </h3>
 
-                  <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1.25rem' }}>
-                    <div>📋 <strong>C.A. (Certificado):</strong> {epi.ca_numero}</div>
-                    <div>🗓️ <strong>Periodicidade de Troca:</strong> a cada {epi.intervalo_dias_troca} dias</div>
-                    <div>📍 <strong>Localização:</strong> {epi.localizacao}</div>
+                  <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <FileCheck size={15} color="#00d4aa" />
+                      <span><strong>C.A. (Certificado):</strong> {epi.ca_numero}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Calendar size={15} color="#3b82f6" />
+                      <span><strong>Periodicidade de Troca:</strong> a cada {epi.intervalo_dias_troca} dias</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <MapPin size={15} color="#8b5cf6" />
+                      <span><strong>Localização:</strong> {epi.localizacao}</span>
+                    </div>
                   </div>
 
                   {/* Status do Prazo (RN-02 / RN-05) */}

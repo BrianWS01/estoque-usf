@@ -1,18 +1,19 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
+import { LoginView } from './components/LoginView';
 import { ColaboradorView } from './components/ColaboradorView';
 import { SupervisorView } from './components/SupervisorView';
 import { AdminView } from './components/AdminView';
 
 const MainLayout = () => {
-  const { currentUser, notification } = useAuth();
+  const { currentUser, isAuthenticated, notification } = useAuth();
 
   return (
     <div className="app-container">
       <Navbar />
 
-      {/* Toast Notification Banner */}
+      {/* Banner de Notificação Toast */}
       {notification && (
         <div style={{
           position: 'fixed',
@@ -35,23 +36,29 @@ const MainLayout = () => {
         </div>
       )}
 
-      {/* Conteúdo Principal dinâmico com base no papel do Usuário */}
+      {/* Renderização Condicional: Login ou Visão por Papel RBAC */}
       <main className="main-content">
-        {currentUser.papel === 'COLABORADOR' && <ColaboradorView />}
-        {currentUser.papel === 'SUPERVISOR' && <SupervisorView />}
-        {currentUser.papel === 'ADMIN' && <AdminView />}
+        {!isAuthenticated || !currentUser ? (
+          <LoginView />
+        ) : (
+          <>
+            {currentUser.papel === 'COLABORADOR' && <ColaboradorView />}
+            {currentUser.papel === 'SUPERVISOR' && <SupervisorView />}
+            {currentUser.papel === 'ADMIN' && <AdminView />}
+          </>
+        )}
       </main>
 
-      {/* Rodapé Acadêmico */}
+      {/* Rodapé Acadêmico Personalizado - USF */}
       <footer style={{
         textAlign: 'center',
         padding: '1.5rem',
-        fontSize: '0.8rem',
+        fontSize: '0.825rem',
         color: 'var(--text-muted)',
         borderTop: '1px solid var(--border-color)',
         background: 'var(--bg-glass)'
       }}>
-        Projeto Acadêmico - Automação Inteligente no Almoxarifado (EPIs) &copy; {new Date().getFullYear()} | Integrado ao Supabase (PostgreSQL)
+        Projeto Acadêmico - Automação Inteligente no Almoxarifado (EPIs) &copy; 2026 | ATIVIDADE EXTENSIONISTA - USF
       </footer>
     </div>
   );

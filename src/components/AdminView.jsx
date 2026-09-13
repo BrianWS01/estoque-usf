@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Package, Users, Shield, AlertTriangle, Plus, Edit3, FileSpreadsheet, Activity, CheckCircle, Database } from 'lucide-react';
+import { Package, Users, Shield, AlertTriangle, Plus, Edit3, FileSpreadsheet, Activity, Lock, FileText, ClipboardList } from 'lucide-react';
 
 export const AdminView = () => {
   const { currentUser, data, salvarEpi, salvarMatrizRule, showToast } = useAuth();
@@ -130,31 +130,35 @@ export const AdminView = () => {
         </div>
       </div>
 
-      {/* Navegação por Abas */}
+      {/* Navegação por Abas com Ícones */}
       <div className="tabs">
         <button 
           className={`tab-btn ${activeTab === 'estoque' ? 'active' : ''}`}
           onClick={() => setActiveTab('estoque')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
         >
-          📦 Gestão de Estoque ({data.epis.length})
+          <Package size={16} /> Gestão de Estoque ({data.epis.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'matriz' ? 'active' : ''}`}
           onClick={() => setActiveTab('matriz')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
         >
-          🔐 Matriz Cargo x EPI (RN-01)
+          <Lock size={16} /> Matriz Cargo x EPI (RN-01)
         </button>
         <button 
           className={`tab-btn ${activeTab === 'usuarios' ? 'active' : ''}`}
           onClick={() => setActiveTab('usuarios')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
         >
-          👥 Funcionários & Cargos ({data.usuarios.length})
+          <Users size={16} /> Funcionários & Cargos ({data.usuarios.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'auditoria' ? 'active' : ''}`}
           onClick={() => setActiveTab('auditoria')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
         >
-          📜 Log de Auditoria & Relatórios (RN-08)
+          <ClipboardList size={16} /> Log de Auditoria & Relatórios (RN-08)
         </button>
       </div>
 

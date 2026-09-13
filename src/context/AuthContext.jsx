@@ -10,28 +10,73 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : INITIAL_MOCK_DATA;
   });
 
-  // Usuário ativo no momento (por padrão, Ana Beatriz - Colaboradora Eletricista)
-  const [currentUser, setCurrentUser] = useState(() => data.usuarios.find(u => u.id === 3) || data.usuarios[0]);
+  // Autenticação e Usuário ativo
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('almoxarifado_active_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(currentUser));
   const [notification, setNotification] = useState(null);
 
-  // Salvar no localStorage sempre que houver modificações
+  // Salvar estado no localStorage
   useEffect(() => {
     localStorage.setItem('almoxarifado_data', JSON.stringify(data));
   }, [data]);
 
-  // Função auxiliar para exibir notificações Toast
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('almoxarifado_active_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('almoxarifado_active_user');
+    }
+  }, [currentUser]);
+
+  // Função Toast
   const showToast = (message, type = 'info') => {
     setNotification({ message, type, id: Date.now() });
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Alternar perfil ativo (para facilitar simulação na apresentação da faculdade)
+  // Login via Matrícula
+  const loginWithMatricula = (matricula, senha) => {
+    const cleanMatricula = matricula.trim().toUpperCase();
+    const target = data.usuarios.find(u => u.matricula.toUpperCase() === cleanMatricula);
+
+    if (target) {
+      setCurrentUser(target);
+      setIsAuthenticated(true);
+      showToast(`Bem-vindo, ${target.nome}!`, 'success');
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  // Login Rápido de Apresentação
+  const selectQuickUser = (usuarioId) => {
+    const target = data.usuarios.find(u => u.id === usuarioId);
+    if (target) {
+      setCurrentUser(target);
+      setIsAuthenticated(true);
+      showToast(`Login realizado como: ${target.nome} (${target.papel})`, 'info');
+    }
+  };
+
+  // Alternar perfil diretamente se logado
   const switchProfile = (roleName) => {
     const target = data.usuarios.find(u => u.papel === roleName);
     if (target) {
       setCurrentUser(target);
       showToast(`Perfil alterado para: ${target.nome} (${target.papel})`, 'info');
     }
+  };
+
+  // Sair / Logout
+  const logout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    showToast('Sessão encerrada com sucesso.', 'info');
   };
 
   // ==============================================================================
@@ -51,7 +96,6 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: 'Estoque insuficiente.' };
     }
 
-    // Calcular próxima data de troca (Data Atual + intervalo em dias do EPI)
     const dataAtual = new Date();
     const dataProximaTroca = new Date(dataAtual.getTime() + epi.intervalo_dias_troca * 24 * 60 * 60 * 1000);
     const dataProximaTrocaStr = dataProximaTroca.toISOString().split('T')[0];
@@ -64,10 +108,9 @@ export const AuthProvider = ({ children }) => {
       data_retirada: dataAtual.toISOString(),
       proxima_troca_prevista: dataProximaTrocaStr,
       tipo: 'RETIRADA_PADRAO',
-      responsavel_entrega_id: currentUser.id
+      responsavel_entrega_id: currentUser ? currentUser.id : 1
     };
 
-    // Atualizar estado global
     setData(prev => {
       const novosEpis = prev.epis.map(e => 
         e.id === epiId ? { ...e, estoque_atual: e.estoque_atual - cantidad } : e
@@ -110,7 +153,7 @@ export const AuthProvider = ({ children }) => {
       quantidade: 1,
       justificativa: justificativa.trim(),
       status: 'PENDENTE',
-      supervisor_id: usuario.supervisor_id || 2, // Fallback para Supervisor padrão
+      supervisor_id: usuario.supervisor_id || 2,
       data_solicitacao: new Date().toISOString()
     };
 
@@ -144,7 +187,6 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Baixa no estoque + movimentação de exceção aprovada
       const dataAtual = new Date();
       const dataProximaTroca = new Date(dataAtual.getTime() + epi.intervalo_dias_troca * 24 * 60 * 60 * 1000);
 
@@ -156,7 +198,7 @@ export const AuthProvider = ({ children }) => {
         data_retirada: dataAtual.toISOString(),
         proxima_troca_prevista: dataProximaTroca.toISOString().split('T')[0],
         tipo: 'EXCECAO_APROVADA',
-        responsavel_entrega_id: currentUser.id,
+        responsavel_entrega_id: currentUser ? currentUser.id : 1,
         observacao: `Aprovado por supervisor: ${respostaSupervisor}`
       };
 
@@ -169,7 +211,7 @@ export const AuthProvider = ({ children }) => {
         ),
         logs_auditoria: [{
           id: Date.now(),
-          usuario_id: currentUser.id,
+          usuario_id: currentUser ? currentUser.id : 1,
           acao: 'SOLICITACAO_APROVADA',
           detalhes: `Exceção aprovada para ${usuario.nome} (${epi.nome})`,
           created_at: new Date().toISOString()
@@ -178,7 +220,6 @@ export const AuthProvider = ({ children }) => {
 
       showToast(`Solicitação de ${usuario.nome} APROVADA com sucesso!`, 'success');
     } else {
-      // Rejeitado
       setData(prev => ({
         ...prev,
         solicitacoes_excecao: prev.solicitacoes_excecao.map(s => 
@@ -186,7 +227,7 @@ export const AuthProvider = ({ children }) => {
         ),
         logs_auditoria: [{
           id: Date.now(),
-          usuario_id: currentUser.id,
+          usuario_id: currentUser ? currentUser.id : 1,
           acao: 'SOLICITACAO_REJEITADA',
           detalhes: `Exceção rejeitada para ${usuario.nome} (${epi.nome})`,
           created_at: new Date().toISOString()
@@ -197,7 +238,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Funções para Cadastro e Edição (Admin)
   const salvarEpi = (epiObj) => {
     setData(prev => {
       const exists = prev.epis.some(e => e.id === epiObj.id);
@@ -225,15 +265,20 @@ export const AuthProvider = ({ children }) => {
 
   const resetarDados = () => {
     localStorage.removeItem('almoxarifado_data');
+    localStorage.removeItem('almoxarifado_active_user');
     setData(INITIAL_MOCK_DATA);
-    setCurrentUser(INITIAL_MOCK_DATA.usuarios.find(u => u.id === 3));
+    setCurrentUser(null);
+    setIsAuthenticated(false);
     showToast('Dados restaurados para os valores originais do teste!', 'info');
   };
 
   return (
     <AuthContext.Provider value={{
       currentUser,
-      setCurrentUser,
+      isAuthenticated,
+      loginWithMatricula,
+      selectQuickUser,
+      logout,
       switchProfile,
       data,
       notification,
