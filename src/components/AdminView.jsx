@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Package, Users, Shield, AlertTriangle, Plus, Edit3, FileSpreadsheet, Activity, Lock, FileText, ClipboardList } from 'lucide-react';
+import { Package, Users, Shield, AlertTriangle, Plus, Edit3, Trash2, FileSpreadsheet, Activity, Lock, FileText, ClipboardList } from 'lucide-react';
 
 export const AdminView = () => {
-  const { currentUser, data, salvarEpi, salvarMatrizRule, showToast } = useAuth();
+  const { currentUser, data, salvarEpi, excluirEpi, salvarMatrizRule, showToast } = useAuth();
   const [activeTab, setActiveTab] = useState('estoque');
 
   // Estado para Modal de Novo/Editar EPI
@@ -32,7 +32,7 @@ export const AdminView = () => {
       setEpiFormData(epi);
     } else {
       setEpiFormData({
-        id: Date.now(),
+        id: null,
         codigo: `EPI-00${data.epis.length + 1}`,
         nome: '',
         ca_numero: 'CA-',
@@ -49,8 +49,18 @@ export const AdminView = () => {
   const handleSaveEpiSubmit = (e) => {
     e.preventDefault();
     if (!epiFormData.nome || !epiFormData.codigo) return;
-    salvarEpi(epiFormData);
+    salvarEpi({
+      ...epiFormData,
+      id: epiFormData.id ? epiFormData.id : Date.now()
+    });
     setIsEpiModalOpen(false);
+  };
+
+  const handleConfirmarExclusao = (epiId, nomeEpi) => {
+    if (window.confirm(`Tem certeza que deseja excluir o EPI "${nomeEpi}"?`)) {
+      excluirEpi(epiId);
+      setIsEpiModalOpen(false);
+    }
   };
 
   const handleAdicionarRegraMatriz = (e) => {
@@ -212,13 +222,24 @@ export const AdminView = () => {
                         </span>
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-secondary"
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                          onClick={() => handleOpenEpiModal(epi)}
-                        >
-                          <Edit3 size={14} /> Editar
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button 
+                            className="btn btn-secondary"
+                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                            onClick={() => handleOpenEpiModal(epi)}
+                            title="Editar EPI"
+                          >
+                            <Edit3 size={14} /> Editar
+                          </button>
+                          <button 
+                            className="btn btn-danger"
+                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                            onClick={() => handleConfirmarExclusao(epi.id, epi.nome)}
+                            title="Excluir EPI"
+                          >
+                            <Trash2 size={14} /> Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -369,7 +390,9 @@ export const AdminView = () => {
         <div className="modal-overlay">
           <div className="modal-container">
             <div className="modal-header">
-              <h3 className="modal-title">Cadastrar / Editar Equipamento (EPI)</h3>
+              <h3 className="modal-title">
+                {epiFormData.id ? 'Editar Equipamento (EPI)' : 'Cadastrar Novo Equipamento (EPI)'}
+              </h3>
               <button 
                 onClick={() => setIsEpiModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
@@ -452,7 +475,19 @@ export const AdminView = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              {/* Botões de Ação do Modal incluindo Botão de Excluir */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.75rem' }}>
+                {epiFormData.id && (
+                  <button 
+                    type="button" 
+                    className="btn btn-danger"
+                    style={{ marginRight: 'auto' }}
+                    onClick={() => handleConfirmarExclusao(epiFormData.id, epiFormData.nome)}
+                  >
+                    <Trash2 size={16} /> Excluir EPI
+                  </button>
+                )}
+                
                 <button type="button" className="btn btn-secondary" onClick={() => setIsEpiModalOpen(false)}>
                   Cancelar
                 </button>

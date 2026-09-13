@@ -249,6 +249,27 @@ export const AuthProvider = ({ children }) => {
     showToast('EPI salvo com sucesso!', 'success');
   };
 
+  // EXCLUIR EPI
+  const excluirEpi = (epiId) => {
+    const targetEpi = data.epis.find(e => e.id === epiId);
+    if (!targetEpi) return;
+
+    setData(prev => ({
+      ...prev,
+      epis: prev.epis.filter(e => e.id !== epiId),
+      matriz_cargo_epi: prev.matriz_cargo_epi.filter(m => m.epi_id !== epiId),
+      logs_auditoria: [{
+        id: Date.now(),
+        usuario_id: currentUser ? currentUser.id : 1,
+        acao: 'EXCLUSAO_EPI',
+        detalhes: `EPI removido do sistema: ${targetEpi.nome} (${targetEpi.codigo})`,
+        created_at: new Date().toISOString()
+      }, ...prev.logs_auditoria]
+    }));
+
+    showToast(`EPI "${targetEpi.nome}" foi excluído com sucesso.`, 'danger');
+  };
+
   const salvarMatrizRule = (cargoId, epiId, cantidadMax = 1) => {
     setData(prev => {
       const exists = prev.matriz_cargo_epi.some(m => m.cargo_id === cargoId && m.epi_id === epiId);
@@ -287,6 +308,7 @@ export const AuthProvider = ({ children }) => {
       solicitarExcecao,
       responderSolicitacao,
       salvarEpi,
+      excluirEpi,
       salvarMatrizRule,
       resetarDados,
       isSupabaseConfigured
