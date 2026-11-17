@@ -54,27 +54,51 @@ export const AuthProvider = ({ children }) => {
     showToast(`Bem-vindo, ${semSenha.nome}!`, 'success');
   };
 
-  // Login via Matrícula (+ senha para contas protegidas, como a do professor)
-  // Retorna { ok: true } ou { ok: false, motivo: 'matricula' | 'senha' }
-  const loginWithMatricula = async (matricula, senha) => {
-    const cleanMatricula = matricula.trim().toUpperCase();
+  // Coloca o usuário vindo do banco nos dados locais usados pelas telas e entra
+  const entrarComUsuarioDoBanco = (usuarioDb) => {
+    const local = data.usuarios.find(u => u.matricula.toUpperCase() === usuarioDb.matricula.toUpperCase());
+    const usuario = local ? { ...local, ...usuarioDb, id: local.id } : { ...usuarioDb, id: Date.now() };
+    if (!local) setData(prev => ({ ...prev, usuarios: [...prev.usuarios, usuario] }));
+    entrarComo(usuario);
+  };
 
-    // 1. Supabase configurado: confere matrícula + senha no banco (função login_usuario)
-    if (isSupabaseConfigured && senha) {
-      const { data: rows, error } = await supabase.rpc('login_usuario', { p_matricula: cleanMatricula, p_senha: senha });
-      if (!error && rows && rows.length > 0) {
-        const usuarioDb = rows[0];
-        // Garante que o usuário exista nos dados locais usados pelas telas
-        const local = data.usuarios.find(u => u.matricula.toUpperCase() === usuarioDb.matricula.toUpperCase());
-        const usuario = local ? { ...local, ...usuarioDb, id: local.id } : { ...usuarioDb, id: Date.now() };
-        if (!local) setData(prev => ({ ...prev, usuarios: [...prev.usuarios, usuario] }));
-        entrarComo(usuario);
+  // Login: e-mail ou matrícula + senha
+  // Retorna { ok: true } ou { ok: false, motivo: 'matricula' | 'senha' | 'perfil' | 'conexao' }
+  const loginWithMatricula = async (identificador, senha) => {
+    const entrada = identificador.trim();
+
+    // 1. Supabase configurado: o login passa SOMENTE pelo banco
+    if (isSupabaseConfigured) {
+      if (!senha) return { ok: false, motivo: 'senha' };
+
+      // 1a. E-mail: Supabase Auth (Authentication > Users)
+      if (entrada.includes('@')) {
+        const { error } = await supabase.auth.signInWithPassword({ email: entrada.toLowerCase(), password: senha });
+        if (error) {
+          return { ok: false, motivo: error.status === 400 ? 'senha' : 'conexao' };
+        }
+        // Busca o perfil (papel, cargo, setor) ligado a esse e-mail na tabela usuarios
+        const { data: perfil, error: erroPerfil } = await supabase.rpc('meu_perfil');
+        if (erroPerfil || !perfil || perfil.length === 0) {
+          if (erroPerfil) console.warn('Erro ao buscar perfil:', erroPerfil.message);
+          await supabase.auth.signOut();
+          return { ok: false, motivo: 'perfil' };
+        }
+        entrarComUsuarioDoBanco(perfil[0]);
         return { ok: true };
       }
-      if (error) console.warn('Login Supabase indisponível, usando dados locais:', error.message);
+
+      // 1b. Matrícula + senha guardada no banco (função login_usuario)
+      const { data: rows, error } = await supabase.rpc('login_usuario', { p_matricula: entrada.toUpperCase(), p_senha: senha });
+      if (error) return { ok: false, motivo: 'conexao' };
+      if (!rows || rows.length === 0) return { ok: false, motivo: 'senha' };
+      entrarComUsuarioDoBanco(rows[0]);
+      return { ok: true };
     }
 
-    // 2. Dados locais: contas com senha exigem a senha correta; contas de demonstração entram só com a matrícula
+    // 2. Sem Supabase (modo demonstração): contas com senha exigem a senha correta;
+    //    as demais entram só com a matrícula
+    const cleanMatricula = entrada.toUpperCase();
     const target = data.usuarios.find(u => u.matricula.toUpperCase() === cleanMatricula);
     if (!target) return { ok: false, motivo: 'matricula' };
 
@@ -107,6 +131,7 @@ export const AuthProvider = ({ children }) => {
 
   // Sair / Logout
   const logout = () => {
+    if (isSupabaseConfigured) supabase.auth.signOut();
     setCurrentUser(null);
     setIsAuthenticated(false);
     showToast('Sessão encerrada com sucesso.', 'info');

@@ -3,12 +3,19 @@ import { useAuth } from '../context/AuthContext';
 import { ShieldCheck, User, Lock, LogIn, Award, ShieldAlert, Sparkles, Building2, CheckCircle2 } from 'lucide-react';
 
 export const LoginView = () => {
-  const { loginWithMatricula, data, selectQuickUser } = useAuth();
+  const { loginWithMatricula, data, selectQuickUser, isSupabaseConfigured } = useAuth();
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   const [entrando, setEntrando] = useState(false);
+
+  const MENSAGENS_ERRO = {
+    senha: isSupabaseConfigured ? 'E-mail/matrícula ou senha incorretos.' : 'Senha incorreta para esta matrícula.',
+    perfil: 'Login aceito, mas este e-mail não está ligado a nenhum funcionário na tabela usuarios.',
+    conexao: 'Não foi possível conectar ao banco de dados. Tente novamente.',
+    matricula: 'Matrícula não encontrada. Tente "FUNC-201", "SUP-101" ou "ADM-001".'
+  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -16,11 +23,9 @@ export const LoginView = () => {
     setEntrando(true);
     try {
       const resultado = await loginWithMatricula(matricula, senha);
-      if (!resultado.ok) {
-        setErrorMsg(resultado.motivo === 'senha'
-          ? 'Senha incorreta para esta matrícula.'
-          : 'Matrícula não encontrada. Tente "FUNC-201", "SUP-101" ou "ADM-001".');
-      }
+      if (!resultado.ok) setErrorMsg(MENSAGENS_ERRO[resultado.motivo] || MENSAGENS_ERRO.matricula);
+    } catch (err) {
+      setErrorMsg(MENSAGENS_ERRO.conexao);
     } finally {
       setEntrando(false);
     }
@@ -89,14 +94,15 @@ export const LoginView = () => {
           <form onSubmit={handleLoginSubmit}>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <User size={14} /> Matrícula do Colaborador
+                <User size={14} /> {isSupabaseConfigured ? 'E-mail ou Matrícula' : 'Matrícula do Colaborador'}
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="form-input"
-                placeholder="Ex: FUNC-201 ou ADM-001"
+                placeholder={isSupabaseConfigured ? 'Ex: nome@email.com' : 'Ex: FUNC-201 ou ADM-001'}
                 value={matricula}
-                onChange={(e) => setMatricula(e.target.value.toUpperCase())}
+                autoCapitalize="none"
+                onChange={(e) => setMatricula(e.target.value)}
                 required
               />
             </div>
@@ -120,7 +126,8 @@ export const LoginView = () => {
             </button>
           </form>
 
-          {/* Atalho de Demonstração Rápida para Apresentação */}
+          {/* Atalho de Demonstração Rápida (só sem banco: com Supabase, o login passa apenas pelo banco) */}
+          {!isSupabaseConfigured && (
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', textAlign: 'center', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
               <Sparkles size={14} color="#00d4aa" /> ACESSO RÁPIDO PARA APRESENTAÇÃO
@@ -151,6 +158,7 @@ export const LoginView = () => {
               })}
             </div>
           </div>
+          )}
 
         </div>
 

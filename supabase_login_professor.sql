@@ -11,6 +11,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 -- 2. Coluna de senha (guarda só o hash, nunca a senha em texto)
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_hash TEXT;
 
+-- O seed original insere usuários com id fixo sem avançar a sequência;
+-- ajusta ANTES do insert para o professor não receber um id já usado
+SELECT setval(pg_get_serial_sequence('usuarios', 'id'), (SELECT COALESCE(MAX(id), 0) + 1 FROM usuarios), false);
+
 -- 3. Usuário do professor com perfil ADMIN (acesso a todas as telas)
 INSERT INTO usuarios (nome, matricula, email, cargo_id, supervisor_id, setor, papel, senha_hash)
 VALUES (
@@ -27,9 +31,6 @@ ON CONFLICT (matricula) DO UPDATE
 SET senha_hash = EXCLUDED.senha_hash,
     papel      = EXCLUDED.papel,
     ativo      = TRUE;
-
--- O seed original insere usuários com id fixo; ajusta a sequência para não colidir
-SELECT setval(pg_get_serial_sequence('usuarios', 'id'), (SELECT MAX(id) FROM usuarios));
 
 -- 4. Função de login: confere matrícula + senha e devolve o usuário (sem o hash)
 --    SECURITY DEFINER: o front-end chama com a chave anon sem precisar ler a tabela
