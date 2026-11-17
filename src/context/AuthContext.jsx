@@ -4,6 +4,11 @@ import { INITIAL_MOCK_DATA, DATA_VERSION, isSupabaseConfigured, supabase } from 
 const AuthContext = createContext();
 
 // Dados salvos de uma versão anterior do seed são descartados
+const sha256 = async (texto) => {
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 const savedVersionOk = () => Number(localStorage.getItem('almoxarifado_data_version')) === DATA_VERSION;
 
 export const AuthProvider = ({ children }) => {
@@ -42,19 +47,43 @@ export const AuthProvider = ({ children }) => {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Login via Matrícula
-  const loginWithMatricula = (matricula, senha) => {
-    const cleanMatricula = matricula.trim().toUpperCase();
-    const target = data.usuarios.find(u => u.matricula.toUpperCase() === cleanMatricula);
+  const entrarComo = (usuario) => {
+    const { senha_sha256, ...semSenha } = usuario;
+    setCurrentUser(semSenha);
+    setIsAuthenticated(true);
+    showToast(`Bem-vindo, ${semSenha.nome}!`, 'success');
+  };
 
-    if (target) {
-      setCurrentUser(target);
-      setIsAuthenticated(true);
-      showToast(`Bem-vindo, ${target.nome}!`, 'success');
-      return true;
-    } else {
-      return false;
+  // Login via Matrícula (+ senha para contas protegidas, como a do professor)
+  // Retorna { ok: true } ou { ok: false, motivo: 'matricula' | 'senha' }
+  const loginWithMatricula = async (matricula, senha) => {
+    const cleanMatricula = matricula.trim().toUpperCase();
+
+    // 1. Supabase configurado: confere matrícula + senha no banco (função login_usuario)
+    if (isSupabaseConfigured && senha) {
+      const { data: rows, error } = await supabase.rpc('login_usuario', { p_matricula: cleanMatricula, p_senha: senha });
+      if (!error && rows && rows.length > 0) {
+        const usuarioDb = rows[0];
+        // Garante que o usuário exista nos dados locais usados pelas telas
+        const local = data.usuarios.find(u => u.matricula.toUpperCase() === usuarioDb.matricula.toUpperCase());
+        const usuario = local ? { ...local, ...usuarioDb, id: local.id } : { ...usuarioDb, id: Date.now() };
+        if (!local) setData(prev => ({ ...prev, usuarios: [...prev.usuarios, usuario] }));
+        entrarComo(usuario);
+        return { ok: true };
+      }
+      if (error) console.warn('Login Supabase indisponível, usando dados locais:', error.message);
     }
+
+    // 2. Dados locais: contas com senha exigem a senha correta; contas de demonstração entram só com a matrícula
+    const target = data.usuarios.find(u => u.matricula.toUpperCase() === cleanMatricula);
+    if (!target) return { ok: false, motivo: 'matricula' };
+
+    if (target.senha_sha256) {
+      if (!senha || (await sha256(senha)) !== target.senha_sha256) return { ok: false, motivo: 'senha' };
+    }
+
+    entrarComo(target);
+    return { ok: true };
   };
 
   // Login Rápido de Apresentação
@@ -239,7 +268,7 @@ export const AuthProvider = ({ children }) => {
       id: usuarioObj.id || Date.now(),
       nome: usuarioObj.nome.trim(),
       matricula,
-      cargo_id: Number(usuarioObj.cargo_id),
+      cargo_id: usuarioObj.cargo_id ? Number(usuarioObj.cargo_id) : null,
       supervisor_id: usuarioObj.supervisor_id ? Number(usuarioObj.supervisor_id) : null
     };
 

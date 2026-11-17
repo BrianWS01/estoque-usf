@@ -8,12 +8,21 @@ export const LoginView = () => {
   const [senha, setSenha] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLoginSubmit = (e) => {
+  const [entrando, setEntrando] = useState(false);
+
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    const success = loginWithMatricula(matricula, senha);
-    if (!success) {
-      setErrorMsg('Matrícula não encontrada. Tente "FUNC-201", "SUP-101" ou "ADM-001".');
+    setEntrando(true);
+    try {
+      const resultado = await loginWithMatricula(matricula, senha);
+      if (!resultado.ok) {
+        setErrorMsg(resultado.motivo === 'senha'
+          ? 'Senha incorreta para esta matrícula.'
+          : 'Matrícula não encontrada. Tente "FUNC-201", "SUP-101" ou "ADM-001".');
+      }
+    } finally {
+      setEntrando(false);
     }
   };
 
@@ -105,9 +114,9 @@ export const LoginView = () => {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '0.95rem', marginBottom: '1.75rem' }}>
+            <button type="submit" disabled={entrando} className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '0.95rem', marginBottom: '1.75rem' }}>
               <LogIn size={18} />
-              Entrar no Almoxarifado
+              {entrando ? 'Entrando...' : 'Entrar no Almoxarifado'}
             </button>
           </form>
 

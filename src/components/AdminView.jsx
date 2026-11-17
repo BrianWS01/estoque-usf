@@ -48,7 +48,7 @@ export const AdminView = () => {
 
   const handleOpenUsuarioModal = (usuario = null) => {
     setUsuarioForm(usuario
-      ? { ...USUARIO_VAZIO, ...usuario, supervisor_id: usuario.supervisor_id || '', email: usuario.email || '' }
+      ? { ...USUARIO_VAZIO, ...usuario, cargo_id: usuario.cargo_id || '', supervisor_id: usuario.supervisor_id || '', email: usuario.email || '' }
       : { ...USUARIO_VAZIO, cargo_id: data.cargos[0]?.id || '', supervisor_id: data.usuarios.find(u => u.papel === 'SUPERVISOR')?.id || '' });
     setIsUsuarioModalOpen(true);
   };
@@ -521,8 +521,8 @@ export const AdminView = () => {
                     className="form-select"
                     value={usuarioForm.cargo_id}
                     onChange={(e) => setUsuarioForm({ ...usuarioForm, cargo_id: e.target.value })}
-                    required
                   >
+                    <option value="">— Sem cargo</option>
                     {data.cargos.map(c => (
                       <option key={c.id} value={c.id}>{c.nome}</option>
                     ))}

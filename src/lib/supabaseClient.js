@@ -17,7 +17,7 @@ export const supabase = isSupabaseConfigured
 // MOCK STATE / IN-MEMORY DB (Fallback para Execução Imediata no Navegador)
 // ==============================================================================
 // Incrementar quando o seed mudar, para descartar dados antigos salvos no navegador
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 
 export const INITIAL_MOCK_DATA = {
   cargos: [
@@ -30,7 +30,9 @@ export const INITIAL_MOCK_DATA = {
     { id: 2, nome: 'Integrante 2', matricula: 'SUP-101', cargo_id: 2, setor: 'Manutenção', papel: 'SUPERVISOR' },
     { id: 3, nome: 'Integrante 3', matricula: 'FUNC-201', cargo_id: 1, supervisor_id: 2, setor: 'Elétrica', papel: 'COLABORADOR' },
     { id: 4, nome: 'Integrante 4', matricula: 'FUNC-202', cargo_id: 2, supervisor_id: 2, setor: 'Mecânica', papel: 'COLABORADOR' },
-    { id: 5, nome: 'Integrante 5', matricula: 'FUNC-203', cargo_id: 3, supervisor_id: 2, setor: 'Serviços Gerais', papel: 'COLABORADOR' }
+    { id: 5, nome: 'Integrante 5', matricula: 'FUNC-203', cargo_id: 3, supervisor_id: 2, setor: 'Serviços Gerais', papel: 'COLABORADOR' },
+    // Conta do professor: exige senha (guardada só como hash SHA-256)
+    { id: 6, nome: 'Professor (Avaliador)', matricula: 'PROFESSOR', cargo_id: null, setor: 'Avaliação Acadêmica', papel: 'ADMIN', senha_sha256: 'ce6b3d5f895cd585ea662e4e51843619a4b7cf4639409be8d991d1a4723f80dd' }
   ],
   epis: [
     { id: 1, codigo: 'EPI-001', nome: 'Luva Isolante de Borracha Alta Tensão', ca_numero: 'CA-10293', validade_ca: '2027-12-31', intervalo_dias_troca: 60, estoque_atual: 15, estoque_minimo: 5, localizacao: 'Armário A1' },
