@@ -106,13 +106,13 @@ export const SupervisorView = () => {
       <div style={{ marginBottom: '3rem' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <AlertCircle color="#fbbf24" size={22} />
-          Solicitações Antecipadas Aguardando Avaliação (RN-03)
+          Solicitações Aguardando Avaliação (RN-03)
         </h2>
 
         {pendentes.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
             <CheckCircle size={48} color="#34d399" style={{ margin: '0 auto 1rem', display: 'block' }} />
-            <h3>Nenhuma solicitação de exceção pendente no momento!</h3>
+            <h3>Nenhuma solicitação pendente no momento!</h3>
             <p style={{ fontSize: '0.875rem' }}>Todas as retiradas no almoxarifado estão seguindo o fluxo padrão dentro do prazo.</p>
           </div>
         ) : (
@@ -126,7 +126,9 @@ export const SupervisorView = () => {
                 <div key={sol.id} className="card" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <span className="badge badge-warning">Aprovação Necessária</span>
+                      <span className={`badge ${sol.tipo === 'SOLICITACAO_EPI' ? 'badge-info' : 'badge-warning'}`}>
+                        {sol.tipo === 'SOLICITACAO_EPI' ? 'Solicitação de EPI' : 'Exceção Antecipada'}
+                      </span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {new Date(sol.data_solicitacao).toLocaleString('pt-BR')}
                       </span>
@@ -140,7 +142,7 @@ export const SupervisorView = () => {
                     <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '0.9rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Equipamento Solicitado</div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{epi?.nome}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>C.A.: {epi?.ca_numero} | Saldo em Estoque: {epi?.estoque_atual} un.</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Quantidade: {sol.quantidade} un. | C.A.: {epi?.ca_numero} | Saldo em Estoque: {epi?.estoque_atual} un.</div>
                     </div>
 
                     <div style={{ marginBottom: '1.25rem' }}>

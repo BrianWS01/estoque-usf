@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileCheck, Calendar, MapPin, Send } from 'lucide-react';
+import { ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileCheck, Calendar, MapPin, Send, PackagePlus } from 'lucide-react';
 
 export const ColaboradorView = () => {
-  const { currentUser, data, realizarRetirada, solicitarExcecao } = useAuth();
+  const { currentUser, data, realizarRetirada, solicitarExcecao, solicitarEpi } = useAuth();
   const [selectedEpiForModal, setSelectedEpiForModal] = useState(null);
   const [justificativaText, setJustificativaText] = useState('');
+
+  // Modal de Solicitação de EPI
+  const [isSolicitacaoOpen, setIsSolicitacaoOpen] = useState(false);
+  const [solicitacaoForm, setSolicitacaoForm] = useState({ epi_id: '', quantidade: 1, justificativa: '' });
+
+  const handleOpenSolicitacao = (epiId = '') => {
+    setSolicitacaoForm({ epi_id: epiId || data.epis[0]?.id || '', quantidade: 1, justificativa: '' });
+    setIsSolicitacaoOpen(true);
+  };
+
+  const handleSubmitSolicitacao = (e) => {
+    e.preventDefault();
+    const ok = solicitarEpi(currentUser.id, Number(solicitacaoForm.epi_id), solicitacaoForm.quantidade, solicitacaoForm.justificativa);
+    if (ok) setIsSolicitacaoOpen(false);
+  };
 
   // 1. Filtrar os EPIs autorizados para o cargo do colaborador (RN-01)
   const permissoesCargo = data.matriz_cargo_epi.filter(m => m.cargo_id === currentUser.cargo_id);
@@ -95,6 +110,9 @@ export const ColaboradorView = () => {
               Matriz de Permissão: <strong style={{ color: 'var(--accent-teal)' }}>{cargoDoUsuario?.nome}</strong> ({episPermitidos.length} itens cadastrados)
             </p>
           </div>
+          <button className="btn btn-primary" onClick={() => handleOpenSolicitacao()}>
+            <PackagePlus size={16} /> Solicitar EPI
+          </button>
         </div>
 
         <div className="grid-cards">
@@ -192,12 +210,14 @@ export const ColaboradorView = () => {
       {/* Seção 2: Minhas Solicitações de Exceção */}
       {minhasSolicitacoes.length > 0 && (
         <div style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Minhas Solicitações de Exceção</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Minhas Solicitações</h2>
           <div className="table-container">
             <table>
               <thead>
                 <tr>
+                  <th>Tipo</th>
                   <th>EPI Solicitado</th>
+                  <th>Qtd</th>
                   <th>Data Solicitação</th>
                   <th>Justificativa</th>
                   <th>Status</th>
@@ -209,7 +229,13 @@ export const ColaboradorView = () => {
                   const epi = data.epis.find(e => e.id === sol.epi_id);
                   return (
                     <tr key={sol.id}>
+                      <td>
+                        <span className={`badge ${sol.tipo === 'SOLICITACAO_EPI' ? 'badge-info' : 'badge-warning'}`}>
+                          {sol.tipo === 'SOLICITACAO_EPI' ? 'Solicitação' : 'Exceção'}
+                        </span>
+                      </td>
                       <td style={{ fontWeight: 700 }}>{epi?.nome || 'N/A'}</td>
+                      <td>{sol.quantidade}</td>
                       <td>{new Date(sol.data_solicitacao).toLocaleString('pt-BR')}</td>
                       <td>{sol.justificativa}</td>
                       <td>
@@ -276,6 +302,82 @@ export const ColaboradorView = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de Solicitação de EPI */}
+      {isSolicitacaoOpen && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <PackagePlus color="#00d4aa" size={22} />
+                Solicitar EPI
+              </h3>
+              <button
+                onClick={() => setIsSolicitacaoOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Peça qualquer EPI do almoxarifado. A solicitação vai para aprovação do supervisor <strong style={{ color: 'var(--text-primary)' }}>{supervisorDoUsuario?.nome || 'responsável'}</strong> e, se aprovada, a retirada é registrada automaticamente.
+            </p>
+
+            <form onSubmit={handleSubmitSolicitacao}>
+              <div className="form-group">
+                <label className="form-label">Equipamento (EPI)</label>
+                <select
+                  className="form-select"
+                  value={solicitacaoForm.epi_id}
+                  onChange={(e) => setSolicitacaoForm({ ...solicitacaoForm, epi_id: e.target.value })}
+                  required
+                >
+                  {data.epis.map(epi => (
+                    <option key={epi.id} value={epi.id}>
+                      {epi.codigo} - {epi.nome}{permissoesCargo.some(p => p.epi_id === epi.id) ? '' : ' (fora da matriz do cargo)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Quantidade</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="form-input"
+                  value={solicitacaoForm.quantidade}
+                  onChange={(e) => setSolicitacaoForm({ ...solicitacaoForm, quantidade: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Motivo da Solicitação (Obrigatório)</label>
+                <textarea
+                  className="form-textarea"
+                  rows={4}
+                  placeholder="Ex: Vou atuar em uma nova frente de trabalho que exige protetor auricular."
+                  value={solicitacaoForm.justificativa}
+                  onChange={(e) => setSolicitacaoForm({ ...solicitacaoForm, justificativa: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsSolicitacaoOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  <Send size={16} />
+                  Enviar Solicitação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Solicitação de Exceção (RN-03) */}
       {selectedEpiForModal && (

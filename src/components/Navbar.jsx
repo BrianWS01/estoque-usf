@@ -24,7 +24,7 @@ export const Navbar = () => {
             <button
               className={`role-btn ${currentUser.papel === 'COLABORADOR' ? 'active' : ''}`}
               onClick={() => switchProfile('COLABORADOR')}
-              title="Ver sistema como Funcionário (Ana Beatriz - Eletricista)"
+              title="Ver sistema como Colaborador"
             >
               <User size={15} />
               Colaborador
@@ -32,7 +32,7 @@ export const Navbar = () => {
             <button
               className={`role-btn ${currentUser.papel === 'SUPERVISOR' ? 'active' : ''}`}
               onClick={() => switchProfile('SUPERVISOR')}
-              title="Ver sistema como Supervisor (Roberto Mendes)"
+              title="Ver sistema como Supervisor"
             >
               <ShieldAlert size={15} />
               Supervisor
@@ -40,7 +40,7 @@ export const Navbar = () => {
             <button
               className={`role-btn ${currentUser.papel === 'ADMIN' ? 'active' : ''}`}
               onClick={() => switchProfile('ADMIN')}
-              title="Ver sistema como Admin/Almoxarife (Carlos Silva)"
+              title="Ver sistema como Admin/Almoxarife"
             >
               <Award size={15} />
               Admin / Almoxarife

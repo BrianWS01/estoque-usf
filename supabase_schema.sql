@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
 -- 7. TABELA DE SOLICITAÇÕES DE EXCEÇÃO (RETIRADA ANTECIPADA)
 CREATE TABLE IF NOT EXISTS solicitacoes_excecao (
     id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50) DEFAULT 'EXCECAO_ANTECIPADA', -- EXCECAO_ANTECIPADA, SOLICITACAO_EPI
     usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     epi_id INT NOT NULL REFERENCES epis(id) ON DELETE CASCADE,
     quantidade INT NOT NULL DEFAULT 1,
@@ -131,11 +132,11 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Insert Usuários (Supervisores e Colaboradores)
 INSERT INTO usuarios (id, nome, matricula, email, cargo_id, supervisor_id, setor, papel) VALUES
-(1, 'Carlos Silva (Admin)', 'ADM-001', 'admin@almoxarifado.com', 1, NULL, 'Almoxarifado / TI', 'ADMIN'),
-(2, 'Roberto Mendes (Supervisor)', 'SUP-101', 'roberto.mendes@empresa.com', 2, NULL, 'Manutenção', 'SUPERVISOR'),
-(3, 'Ana Beatriz (Eletricista)', 'FUNC-201', 'ana.beatriz@empresa.com', 1, 2, 'Elétrica', 'COLABORADOR'),
-(4, 'Lucas Gabriel (Mecânico)', 'FUNC-202', 'lucas.gabriel@empresa.com', 2, 2, 'Mecânica', 'COLABORADOR'),
-(5, 'Mariana Costa (Operadora)', 'FUNC-203', 'mariana.costa@empresa.com', 3, 2, 'Serviços Gerais', 'COLABORADOR')
+(1, 'Integrante 1', 'ADM-001', 'admin@almoxarifado.com', 1, NULL, 'Almoxarifado / TI', 'ADMIN'),
+(2, 'Integrante 2', 'SUP-101', 'integrante2@empresa.com', 2, NULL, 'Manutenção', 'SUPERVISOR'),
+(3, 'Integrante 3', 'FUNC-201', 'integrante3@empresa.com', 1, 2, 'Elétrica', 'COLABORADOR'),
+(4, 'Integrante 4', 'FUNC-202', 'integrante4@empresa.com', 2, 2, 'Mecânica', 'COLABORADOR'),
+(5, 'Integrante 5', 'FUNC-203', 'integrante5@empresa.com', 3, 2, 'Serviços Gerais', 'COLABORADOR')
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert EPIs

@@ -16,6 +16,9 @@ export const supabase = isSupabaseConfigured
 // ==============================================================================
 // MOCK STATE / IN-MEMORY DB (Fallback para Execução Imediata no Navegador)
 // ==============================================================================
+// Incrementar quando o seed mudar, para descartar dados antigos salvos no navegador
+export const DATA_VERSION = 2;
+
 export const INITIAL_MOCK_DATA = {
   cargos: [
     { id: 1, nome: 'Eletricista', descricao: 'Manutenção e instalação de redes elétricas' },
@@ -23,11 +26,11 @@ export const INITIAL_MOCK_DATA = {
     { id: 3, nome: 'Operador de Serviços Gerais', descricao: 'Limpeza e conservação geral' }
   ],
   usuarios: [
-    { id: 1, nome: 'Carlos Silva (Admin)', matricula: 'ADM-001', cargo_id: 1, setor: 'Almoxarifado', papel: 'ADMIN' },
-    { id: 2, nome: 'Roberto Mendes (Supervisor)', matricula: 'SUP-101', cargo_id: 2, setor: 'Manutenção', papel: 'SUPERVISOR' },
-    { id: 3, nome: 'Ana Beatriz (Eletricista)', matricula: 'FUNC-201', cargo_id: 1, supervisor_id: 2, setor: 'Elétrica', papel: 'COLABORADOR' },
-    { id: 4, nome: 'Lucas Gabriel (Mecânico)', matricula: 'FUNC-202', cargo_id: 2, supervisor_id: 2, setor: 'Mecânica', papel: 'COLABORADOR' },
-    { id: 5, nome: 'Mariana Costa (Operadora)', matricula: 'FUNC-203', cargo_id: 3, supervisor_id: 2, setor: 'Serviços Gerais', papel: 'COLABORADOR' }
+    { id: 1, nome: 'Integrante 1', matricula: 'ADM-001', cargo_id: 1, setor: 'Almoxarifado', papel: 'ADMIN' },
+    { id: 2, nome: 'Integrante 2', matricula: 'SUP-101', cargo_id: 2, setor: 'Manutenção', papel: 'SUPERVISOR' },
+    { id: 3, nome: 'Integrante 3', matricula: 'FUNC-201', cargo_id: 1, supervisor_id: 2, setor: 'Elétrica', papel: 'COLABORADOR' },
+    { id: 4, nome: 'Integrante 4', matricula: 'FUNC-202', cargo_id: 2, supervisor_id: 2, setor: 'Mecânica', papel: 'COLABORADOR' },
+    { id: 5, nome: 'Integrante 5', matricula: 'FUNC-203', cargo_id: 3, supervisor_id: 2, setor: 'Serviços Gerais', papel: 'COLABORADOR' }
   ],
   epis: [
     { id: 1, codigo: 'EPI-001', nome: 'Luva Isolante de Borracha Alta Tensão', ca_numero: 'CA-10293', validade_ca: '2027-12-31', intervalo_dias_troca: 60, estoque_atual: 15, estoque_minimo: 5, localizacao: 'Armário A1' },
@@ -49,7 +52,7 @@ export const INITIAL_MOCK_DATA = {
   movimentacoes: [
     {
       id: 1,
-      usuario_id: 3, // Ana Beatriz
+      usuario_id: 3, // Integrante 3
       epi_id: 1,     // Luva Isolante
       quantidade: 1,
       data_retirada: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString(), // 55 dias atrás
@@ -59,7 +62,7 @@ export const INITIAL_MOCK_DATA = {
     },
     {
       id: 2,
-      usuario_id: 4, // Lucas Gabriel
+      usuario_id: 4, // Integrante 4
       epi_id: 3,     // Luva de Raspa
       quantidade: 1,
       data_retirada: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 dias atrás (intervalo é 30d -> bloqueado)

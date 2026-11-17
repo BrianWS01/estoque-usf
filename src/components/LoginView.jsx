@@ -118,35 +118,28 @@ export const LoginView = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button 
-                type="button"
-                className="btn btn-secondary" 
-                style={{ justifyContent: 'flex-start', padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}
-                onClick={() => handleQuickLogin(3)}
-              >
-                <User size={14} color="#00d4aa" />
-                <span><strong>Ana Beatriz</strong> (Eletricista - FUNC-201)</span>
-              </button>
-
-              <button 
-                type="button"
-                className="btn btn-secondary" 
-                style={{ justifyContent: 'flex-start', padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}
-                onClick={() => handleQuickLogin(2)}
-              >
-                <ShieldAlert size={14} color="#fbbf24" />
-                <span><strong>Roberto Mendes</strong> (Supervisor - SUP-101)</span>
-              </button>
-
-              <button 
-                type="button"
-                className="btn btn-secondary" 
-                style={{ justifyContent: 'flex-start', padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}
-                onClick={() => handleQuickLogin(1)}
-              >
-                <Award size={14} color="#c084fc" />
-                <span><strong>Carlos Silva</strong> (Admin / Almoxarife - ADM-001)</span>
-              </button>
+              {[
+                { papel: 'COLABORADOR', Icon: User, color: '#00d4aa' },
+                { papel: 'SUPERVISOR', Icon: ShieldAlert, color: '#fbbf24' },
+                { papel: 'ADMIN', Icon: Award, color: '#c084fc' }
+              ].map(({ papel, Icon, color }) => {
+                const u = data.usuarios.find(x => x.papel === papel);
+                if (!u) return null;
+                const cargo = data.cargos.find(c => c.id === u.cargo_id);
+                const rotulo = papel === 'ADMIN' ? 'Admin / Almoxarife' : papel === 'SUPERVISOR' ? 'Supervisor' : (cargo?.nome || 'Colaborador');
+                return (
+                  <button
+                    key={papel}
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ justifyContent: 'flex-start', padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}
+                    onClick={() => handleQuickLogin(u.id)}
+                  >
+                    <Icon size={14} color={color} />
+                    <span><strong>{u.nome}</strong> ({rotulo} - {u.matricula})</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

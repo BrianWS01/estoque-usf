@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_MOCK_DATA, isSupabaseConfigured, supabase } from '../lib/supabaseClient';
+import { INITIAL_MOCK_DATA, DATA_VERSION, isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext();
+
+// Dados salvos de uma versão anterior do seed são descartados
+const savedVersionOk = () => Number(localStorage.getItem('almoxarifado_data_version')) === DATA_VERSION;
 
 export const AuthProvider = ({ children }) => {
   // Estado Global dos Dados do Sistema
   const [data, setData] = useState(() => {
     const saved = localStorage.getItem('almoxarifado_data');
-    return saved ? JSON.parse(saved) : INITIAL_MOCK_DATA;
+    return saved && savedVersionOk() ? JSON.parse(saved) : INITIAL_MOCK_DATA;
   });
 
   // Autenticação e Usuário ativo
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = localStorage.getItem('almoxarifado_active_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    return savedUser && savedVersionOk() ? JSON.parse(savedUser) : null;
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(currentUser));
@@ -22,6 +25,7 @@ export const AuthProvider = ({ children }) => {
   // Salvar estado no localStorage
   useEffect(() => {
     localStorage.setItem('almoxarifado_data', JSON.stringify(data));
+    localStorage.setItem('almoxarifado_data_version', String(DATA_VERSION));
   }, [data]);
 
   useEffect(() => {
@@ -173,6 +177,93 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
+  // Solicitação de EPI pelo Colaborador (qualquer EPI do catálogo, com quantidade e motivo)
+  const solicitarEpi = (usuarioId, epiId, quantidade, justificativa) => {
+    const usuario = data.usuarios.find(u => u.id === usuarioId);
+    const epi = data.epis.find(e => e.id === epiId);
+    const qtd = Number(quantidade);
+
+    if (!usuario || !epi) {
+      showToast('Selecione um EPI válido.', 'danger');
+      return false;
+    }
+    if (!Number.isInteger(qtd) || qtd < 1) {
+      showToast('Informe uma quantidade válida.', 'danger');
+      return false;
+    }
+    if (!justificativa || justificativa.trim().length < 5) {
+      showToast('Por favor, informe o motivo da solicitação.', 'danger');
+      return false;
+    }
+
+    const novaSolicitacao = {
+      id: Date.now(),
+      tipo: 'SOLICITACAO_EPI',
+      usuario_id: usuarioId,
+      epi_id: epiId,
+      quantidade: qtd,
+      justificativa: justificativa.trim(),
+      status: 'PENDENTE',
+      supervisor_id: usuario.supervisor_id || 2,
+      data_solicitacao: new Date().toISOString()
+    };
+
+    setData(prev => ({
+      ...prev,
+      solicitacoes_excecao: [novaSolicitacao, ...prev.solicitacoes_excecao],
+      logs_auditoria: [{
+        id: Date.now(),
+        usuario_id: usuarioId,
+        acao: 'SOLICITACAO_EPI',
+        detalhes: `Solicitação de EPI criada por ${usuario.nome}: ${qtd}x ${epi.nome}`,
+        created_at: new Date().toISOString()
+      }, ...prev.logs_auditoria]
+    }));
+
+    showToast('Solicitação de EPI enviada ao supervisor!', 'success');
+    return true;
+  };
+
+  // Cadastro / Edição de Funcionário
+  const salvarUsuario = (usuarioObj) => {
+    const matricula = usuarioObj.matricula.trim().toUpperCase();
+    const duplicada = data.usuarios.some(u => u.matricula.toUpperCase() === matricula && u.id !== usuarioObj.id);
+    if (duplicada) {
+      showToast(`Já existe um funcionário com a matrícula ${matricula}.`, 'danger');
+      return false;
+    }
+
+    const isNovo = !usuarioObj.id;
+    const registro = {
+      ...usuarioObj,
+      id: usuarioObj.id || Date.now(),
+      nome: usuarioObj.nome.trim(),
+      matricula,
+      cargo_id: Number(usuarioObj.cargo_id),
+      supervisor_id: usuarioObj.supervisor_id ? Number(usuarioObj.supervisor_id) : null
+    };
+
+    setData(prev => ({
+      ...prev,
+      usuarios: isNovo
+        ? [...prev.usuarios, registro]
+        : prev.usuarios.map(u => u.id === registro.id ? registro : u),
+      logs_auditoria: [{
+        id: Date.now(),
+        usuario_id: currentUser ? currentUser.id : 1,
+        acao: isNovo ? 'CADASTRO_FUNCIONARIO' : 'EDICAO_FUNCIONARIO',
+        detalhes: `${isNovo ? 'Funcionário cadastrado' : 'Funcionário atualizado'}: ${registro.nome} (${registro.matricula})`,
+        created_at: new Date().toISOString()
+      }, ...prev.logs_auditoria]
+    }));
+
+    // Mantém o usuário logado sincronizado se ele próprio for editado
+    if (currentUser && currentUser.id === registro.id) setCurrentUser(registro);
+
+    showToast(isNovo ? `Funcionário ${registro.nome} cadastrado!` : `Funcionário ${registro.nome} atualizado!`, 'success');
+    return true;
+  };
+
   // Aprovação pelo Supervisor (RN-03 & RN-04)
   const responderSolicitacao = (solicitacaoId, novoStatus, respostaSupervisor = '') => {
     const solicitacao = data.solicitacoes_excecao.find(s => s.id === solicitacaoId);
@@ -197,7 +288,7 @@ export const AuthProvider = ({ children }) => {
         quantidade: solicitacao.quantidade,
         data_retirada: dataAtual.toISOString(),
         proxima_troca_prevista: dataProximaTroca.toISOString().split('T')[0],
-        tipo: 'EXCECAO_APROVADA',
+        tipo: solicitacao.tipo === 'SOLICITACAO_EPI' ? 'SOLICITACAO_APROVADA' : 'EXCECAO_APROVADA',
         responsavel_entrega_id: currentUser ? currentUser.id : 1,
         observacao: `Aprovado por supervisor: ${respostaSupervisor}`
       };
@@ -306,6 +397,8 @@ export const AuthProvider = ({ children }) => {
       showToast,
       realizarRetirada,
       solicitarExcecao,
+      solicitarEpi,
+      salvarUsuario,
       responderSolicitacao,
       salvarEpi,
       excluirEpi,

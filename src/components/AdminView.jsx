@@ -1,10 +1,29 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Package, Users, Shield, AlertTriangle, Plus, Edit3, Trash2, FileSpreadsheet, Activity, Lock, FileText, ClipboardList } from 'lucide-react';
+import { Package, Users, Shield, AlertTriangle, Plus, Edit3, Trash2, FileSpreadsheet, Activity, Lock, FileText, ClipboardList, UserPlus, ScanLine } from 'lucide-react';
+import { ScannerCodigoModal } from './ScannerCodigoModal';
+
+const USUARIO_VAZIO = {
+  id: null,
+  nome: '',
+  matricula: '',
+  email: '',
+  cargo_id: '',
+  setor: '',
+  supervisor_id: '',
+  papel: 'COLABORADOR'
+};
 
 export const AdminView = () => {
-  const { currentUser, data, salvarEpi, excluirEpi, salvarMatrizRule, showToast } = useAuth();
+  const { currentUser, data, salvarEpi, excluirEpi, salvarMatrizRule, salvarUsuario, showToast } = useAuth();
   const [activeTab, setActiveTab] = useState('estoque');
+
+  // Estado para Modal de Cadastro/Edição de Funcionário
+  const [isUsuarioModalOpen, setIsUsuarioModalOpen] = useState(false);
+  const [usuarioForm, setUsuarioForm] = useState(USUARIO_VAZIO);
+
+  // Estado para Modal de Leitura de QR Code / Código de Barras
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Estado para Modal de Novo/Editar EPI
   const [isEpiModalOpen, setIsEpiModalOpen] = useState(false);
@@ -27,13 +46,41 @@ export const AdminView = () => {
   // Cálculos de Alertas
   const episEstoqueBaixo = data.epis.filter(e => e.estoque_atual <= e.estoque_minimo);
 
-  const handleOpenEpiModal = (epi = null) => {
+  const handleOpenUsuarioModal = (usuario = null) => {
+    setUsuarioForm(usuario
+      ? { ...USUARIO_VAZIO, ...usuario, supervisor_id: usuario.supervisor_id || '', email: usuario.email || '' }
+      : { ...USUARIO_VAZIO, cargo_id: data.cargos[0]?.id || '', supervisor_id: data.usuarios.find(u => u.papel === 'SUPERVISOR')?.id || '' });
+    setIsUsuarioModalOpen(true);
+  };
+
+  const handleSaveUsuarioSubmit = (e) => {
+    e.preventDefault();
+    if (!usuarioForm.nome.trim() || !usuarioForm.matricula.trim() || !usuarioForm.setor.trim()) return;
+    if (salvarUsuario(usuarioForm)) setIsUsuarioModalOpen(false);
+  };
+
+  // Resultado do leitor: EPI já existente abre para edição, código novo abre cadastro pré-preenchido
+  const handleCodigoLido = (codigoLido) => {
+    const codigo = codigoLido.trim();
+    if (!codigo) return;
+    setIsScannerOpen(false);
+    const existente = data.epis.find(e => e.codigo.toUpperCase() === codigo.toUpperCase());
+    if (existente) {
+      showToast(`Código ${codigo} já cadastrado: ${existente.nome}. Abrindo para edição.`, 'info');
+      handleOpenEpiModal(existente);
+    } else {
+      showToast(`Código ${codigo} lido. Complete o cadastro do equipamento.`, 'success');
+      handleOpenEpiModal(null, codigo);
+    }
+  };
+
+  const handleOpenEpiModal = (epi = null, codigoInicial = null) => {
     if (epi) {
       setEpiFormData(epi);
     } else {
       setEpiFormData({
         id: null,
-        codigo: `EPI-00${data.epis.length + 1}`,
+        codigo: codigoInicial || `EPI-00${data.epis.length + 1}`,
         nome: '',
         ca_numero: 'CA-',
         validade_ca: '2028-12-31',
@@ -84,9 +131,12 @@ export const AdminView = () => {
               Gestão de Estoque, Parametrização da Matriz Cargo x EPI e Auditoria Geral
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={() => handleExportarRelatorio('PDF')}>
               <FileSpreadsheet size={16} /> Exportar PDF
+            </button>
+            <button className="btn btn-secondary" onClick={() => setIsScannerOpen(true)}>
+              <ScanLine size={16} /> Cadastrar por QR / Código
             </button>
             <button className="btn btn-primary" onClick={() => handleOpenEpiModal()}>
               <Plus size={16} /> Cadastrar Novo EPI
@@ -316,6 +366,15 @@ export const AdminView = () => {
 
       {/* ABA 3: FUNCIONÁRIOS */}
       {activeTab === 'usuarios' && (
+        <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Cadastre novos funcionários e defina cargo, setor, supervisor e perfil de acesso.
+          </p>
+          <button className="btn btn-primary" onClick={() => handleOpenUsuarioModal()}>
+            <UserPlus size={16} /> Cadastrar Funcionário
+          </button>
+        </div>
         <div className="table-container">
           <table>
             <thead>
@@ -326,6 +385,7 @@ export const AdminView = () => {
                 <th>Setor</th>
                 <th>Supervisor Responsável</th>
                 <th>Perfil de Acesso</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -344,11 +404,22 @@ export const AdminView = () => {
                         {u.papel}
                       </span>
                     </td>
+                    <td>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                        onClick={() => handleOpenUsuarioModal(u)}
+                        title="Editar funcionário"
+                      >
+                        <Edit3 size={14} /> Editar
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
         </div>
       )}
 
@@ -382,6 +453,133 @@ export const AdminView = () => {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal de Leitura de QR Code / Código de Barras / Código Manual */}
+      {isScannerOpen && (
+        <ScannerCodigoModal
+          onClose={() => setIsScannerOpen(false)}
+          onCodigo={handleCodigoLido}
+        />
+      )}
+
+      {/* Modal para Cadastro/Edição de Funcionário */}
+      {isUsuarioModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {usuarioForm.id ? 'Editar Funcionário' : 'Cadastrar Novo Funcionário'}
+              </h3>
+              <button
+                onClick={() => setIsUsuarioModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUsuarioSubmit}>
+              <div className="form-group">
+                <label className="form-label">Nome Completo</label>
+                <input
+                  className="form-input"
+                  value={usuarioForm.nome}
+                  onChange={(e) => setUsuarioForm({ ...usuarioForm, nome: e.target.value })}
+                  placeholder="Ex: Maria da Silva"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Matrícula</label>
+                  <input
+                    className="form-input"
+                    value={usuarioForm.matricula}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, matricula: e.target.value.toUpperCase() })}
+                    placeholder="Ex: FUNC-204"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">E-mail (opcional)</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    value={usuarioForm.email}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Cargo / Função</label>
+                  <select
+                    className="form-select"
+                    value={usuarioForm.cargo_id}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, cargo_id: e.target.value })}
+                    required
+                  >
+                    {data.cargos.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Setor</label>
+                  <input
+                    className="form-input"
+                    value={usuarioForm.setor}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, setor: e.target.value })}
+                    placeholder="Ex: Manutenção"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Perfil de Acesso</label>
+                  <select
+                    className="form-select"
+                    value={usuarioForm.papel}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, papel: e.target.value })}
+                  >
+                    <option value="COLABORADOR">Colaborador</option>
+                    <option value="SUPERVISOR">Supervisor</option>
+                    <option value="ADMIN">Admin / Almoxarife</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Supervisor Responsável</label>
+                  <select
+                    className="form-select"
+                    value={usuarioForm.supervisor_id}
+                    onChange={(e) => setUsuarioForm({ ...usuarioForm, supervisor_id: e.target.value })}
+                  >
+                    <option value="">— Sem supervisor</option>
+                    {data.usuarios
+                      .filter(u => u.papel === 'SUPERVISOR' && u.id !== usuarioForm.id)
+                      .map(u => (
+                        <option key={u.id} value={u.id}>{u.nome}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsUsuarioModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Salvar Funcionário
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
